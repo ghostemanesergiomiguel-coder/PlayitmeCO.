@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.I.P - Terminal Avanzada (Sector 4)</title>
+    <style>
+        :root {
+            --neon-azul: #00f0ff;
+            --neon-rosa: #ff0055;
+            --neon-morado: #b026ff;
+            --neon-verde: #00ff66;
+            --bg-base: #020205;
+            --panel-bg: rgba(10, 10, 18, 0.85);
+        }
+
+        /* Efecto Tubo de Rayos Catódicos (CRT) y Escáner Avanzado */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.008), rgba(0, 0, 255, 0.02));
+            z-index: 99999;
+            background-size: 100% 4px, 4px 100%;
+            pointer-events: none;
+        }
+
+        @keyframes crtFlicker {
+            0% { opacity: 0.99; filter: brightness(1); }
+            50% { opacity: 0.96; filter: brightness(0.92); }
+            100% { opacity: 1; filter: brightness(1.08); }
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: #e2e2ec;
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            margin: 0;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+            transition: background-color 0.6s ease;
+            animation: crtFlicker 0.15s infinite;
+        }
+
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .wrapper {
+            width: 100%;
+            max-width: 1440px;
+            z-index: 1;
+            transition: transform 0.1s ease, filter 0.1s ease;
+        }
+
+        /* Animación VHS V-SYNC descompuesto masivo */
+        @keyframes vSyncCrash {
+            0% { transform: translateY(0) skewX(0deg); filter: contrast(1.5) blur(0px); }
+            10% { transform: translateY(-15px) skewX(10deg); filter: invert(0.05) sepia(0.3); }
+            20% { transform: translateY(20px) skewX(-8deg); filter: blur(2px); }
+            30% { transform: translateY(-5px) skewX(4deg); }
+            50% { transform: translateY(0) skewX(0deg); filter: none; }
+        }
+        .v-sync-error {
+            animation: vSyncCrash 0.4s steps(4) infinite;
+        }
+
+        /* Barra Superior Modular */
+        .top-bar {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 900px) {
+            .top-bar { grid-template-columns: 1fr; }
+        }
+
+        .autor-info {
+            background: var(--panel-bg);
+            border: 1px solid rgba(176, 38, 255, 0.3);
+            border-left: 5px solid var(--neon-morado);
+            padding: 25px;
+            border-radius: 4px;
+            box-shadow: 0 0 25px rgba(176, 38, 255, 0.05), inset 0 0 15px rgba(176, 38, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+
+        .autor-info h3 {
+            margin: 0;
+            color: #f1bfff;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn-link-db {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 145, 0, 0.05);
+            border: 1px solid #ff9100;
+            color: #ff9100;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-decoration: none;
+            letter-spacing: 1.5px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-link-db:hover {
+            background: rgba(255, 145, 0, 0.2);
+            box-shadow: 0 0 20px rgba(255, 145, 0, 0.4);
+            transform: scale(1.02);
+        }
+
+        .control-musica {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.4s ease;
+        }
+
+        .control-musica span {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: var(--neon-azul);
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .control-musica button {
+            padding: 10px 20px;
+            font-size: 0.75rem;
+            font-family: 'Courier New', monospace;
+            border-radius: 3px;
+            background: transparent;
+            border: 1px solid var(--neon-rosa);
+            color: var(--neon-rosa);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .control-musica button.playing {
+            border-color: var(--neon-verde);
+            color: var(--neon-verde);
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            font-family: 'Courier New', monospace;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #fff;
+            text-shadow: 0 0 15px rgba(255,255,255,0.2), 0 0 30px var(--neon-azul);
+            margin: 0;
+            cursor: pointer;
+            transition: all 0.4s ease;
+        }
+
+        header p {
+            font-weight: bold;
+            letter-spacing: 4px;
+            font-family: 'Courier New', monospace;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--neon-azul);
+            transition: color 0.4s ease;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 35px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 950px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        .seccion {
+            background: var(--panel-bg);
+            padding: 35px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            position: relative;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .azul { border-top: 3px solid var(--neon-azul); }
+        .rosa { border-top: 3px solid var(--neon-rosa); }
+        .morado { border-top: 3px solid var(--neon-morado); }
+
+        .seccion h3 {
+            font-family: 'Courier New', monospace;
+            font-size: 1.15rem;
+            margin-top: 0;
+            letter-spacing: 1px;
+        }
+
+        .marco-img {
+            width: 100%;
+            background: #040408;
+            border: 1px solid rgba(255,255,255,0.03);
+            margin: 25px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            transition: border-color 0.4s ease;
+        }
+
+        .azul .marco-img { height: 400px; border-bottom: 2px solid var(--neon-azul); }
+        .rosa .marco-img { height: 260px; border-bottom: 2px solid var(--neon-rosa); }
+
+        @keyframes laserMov {
+            0% { top: 0%; opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .marco-img::after {
+            content: ''; position: absolute; left: 0; width: 100%; height: 2px;
+            animation: laserMov 3s linear infinite;
+        }
+
+        .azul .marco-img::after { background: var(--neon-azul); box-shadow: 0 0 10px var(--neon-azul); }
+        .rosa .marco-img::after { background: var(--neon-rosa); box-shadow: 0 0 10px var(--neon-rosa); }
+
+        .marco-img img {
+            max-width: 90%; max-height: 90%;
+            object-fit: contain;
+            filter: saturate(1.1) contrast(1.1);
+            transition: transform 0.4s ease, filter 0.1s ease;
+        }
+
+        .seccion:hover .marco-img img { transform: scale(1.02); }
+
+        .modulo-audio-cyber {
+            background: rgba(5, 5, 10, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .azul .modulo-audio-cyber { border-left: 4px solid var(--neon-azul); }
+        .rosa .modulo-audio-cyber { border-left: 4px solid var(--neon-rosa); }
+
+        .audio-info-texto { display: flex; flex-direction: column; gap: 4px; }
+        .audio-info-texto .track-lbl { font-family: 'Courier New', monospace; font-size: 0.65rem; color: #8e8e9e; letter-spacing: 1px; }
+        .audio-info-texto .track-name { font-family: 'Courier New', monospace; font-size: 0.85rem; font-weight: bold; letter-spacing: 0.5px; }
+        .azul .audio-info-texto .track-name { color: var(--neon-azul); }
+        .rosa .audio-info-texto .track-name { color: var(--neon-rosa); }
+
+        .btn-audio-cyber {
+            padding: 8px 16px; font-size: 0.7rem; font-family: 'Courier New', monospace; font-weight: bold;
+            background: transparent; cursor: pointer; transition: all 0.3s ease; border-radius: 2px;
+        }
+        .azul .btn-audio-cyber { border: 1px solid var(--neon-azul); color: var(--neon-azul); }
+        .azul .btn-audio-cyber.reproducing { border-color: var(--neon-verde); color: var(--neon-verde); box-shadow: 0 0 10px rgba(0, 255, 102, 0.2); }
+        .rosa .btn-audio-cyber { border: 1px solid var(--neon-rosa); color: var(--neon-rosa); }
+        .rosa .btn-audio-cyber.reproducing { border-color: var(--neon-verde); color: var(--neon-verde); box-shadow: 0 0 10px rgba(0, 255, 102, 0.2); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        td { background: rgba(5, 5, 10, 0.4); transition: all 0.3s ease; }
+        td:first-child { color: #aaa; font-family: monospace; }
+        td:last-child { color: var(--neon-azul); font-family: 'Courier New', monospace; font-weight: bold; }
+        tr:hover td { background: rgba(0, 240, 255, 0.03); }
+        
+        th { 
+            background: rgba(255, 0, 85, 0.1); color: var(--neon-rosa); border: 1px solid rgba(255, 0, 85, 0.3);
+            text-transform: uppercase; font-weight: bold; font-family: monospace; letter-spacing: 1px; cursor: pointer;
+        }
+
+        .form-registro { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+        .campo { flex: 1; min-width: 260px; }
+        .campo label { display: block; font-size: 0.75rem; color: #8e8e9e; letter-spacing: 1px; margin-bottom: 10px; font-family: monospace; }
+
+        input[type="text"] {
+            width: 100%; padding: 16px; background: #030307; border: 1px solid rgba(176, 38, 255, 0.3);
+            color: var(--neon-verde); font-family: 'Courier New', monospace; font-weight: bold; box-sizing: border-box; border-radius: 2px; transition: all 0.3s;
+        }
+        input[type="text"]:focus { outline: none; border-color: var(--neon-morado); box-shadow: 0 0 15px rgba(176, 38, 255, 0.3); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .alerta-texto { color: var(--neon-rosa); font-size: 0.7rem; display: block; margin-top: 6px; font-family: monospace; }
+
+        button#btnVincular {
+            padding: 16px 40px; background: transparent; color: var(--neon-morado); border: 1px solid var(--neon-morado);
+            font-weight: bold; font-family: monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s;
+        }
+        button#btnVincular:hover { background: rgba(176, 38, 255, 0.15); box-shadow: 0 0 20px rgba(176, 38, 255, 0.4); color: #fff; }
+
+        #resultado { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 35px; }
+
+        @keyframes spawnCard {
+            from { opacity: 0; transform: translateY(15px); filter: brightness(2); }
+            to { opacity: 1; transform: translateY(0); filter: brightness(1); }
+        }
+
+        .ficha-empleado {
+            background: rgba(5, 5, 10, 0.6); border: 1px solid rgba(0, 240, 255, 0.15); border-left: 4px solid var(--neon-azul);
+            padding: 20px; font-size: 0.85rem; animation: spawnCard 0.4s ease-out forwards;
+        }
+        .ficha-empleado:hover { border-left-color: var(--neon-verde); background: rgba(0, 255, 102, 0.02); }
+
+        /* Alarma crítica */
+        @keyframes alarmaPulsar {
+            0% { box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); background: rgba(10, 5, 5, 0.85); }
+            50% { box-shadow: 0 0 35px rgba(255, 0, 85, 0.6); border-color: #ff0055; background: rgba(255, 0, 85, 0.05); }
+            100% { box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); background: rgba(10, 5, 5, 0.85); }
+        }
+        .modo-alarma-card { animation: alarmaPulsar 1.2s infinite ease-in-out; }
+
+        /* Estilo Glitch de Interrogación Extra Siniestro */
+        .glitch-text-float { 
+            position: fixed; 
+            color: #ffffff; 
+            font-family: 'Courier New', monospace; 
+            font-weight: 900; 
+            pointer-events: none; 
+            z-index: 10000; 
+            text-shadow: 3px 0px 0px #ff0055, -3px 0px 0px #00f0ff; 
+            animation: shake 0.1s infinite;
+            letter-spacing: 2px;
+        }
+
+        /* =========================================================================
+           🚨 INTERFAZ DE ALERTA DE PANTALLA COMPLETA (EAS) - ANALOG HORROR
+           ========================================================================= */
+        #contenedorAlertaMaldita {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000000;
+            z-index: 100000; display: none; flex-direction: column; justify-content: center; align-items: center;
+            padding: 40px; box-sizing: border-box; font-family: 'Courier New', monospace; color: #ffffff; overflow: hidden;
+        }
+
+        .vhs-color-bars { display: flex; width: 100%; height: 40px; position: absolute; top: 0; left: 0; opacity: 0.3; }
+        .bar { flex: 1; height: 100%; }
+        .b1 { background: #ffffff; } .b2 { background: #ffff00; } .b3 { background: #00ffff; }
+        .b4 { background: #00ff00; } .b5 { background: #ff00ff; } .b6 { background: #ff0000; } .b7 { background: #0000ff; }
+
+        .eas-box { max-width: 850px; border: 4px solid #ffffff; padding: 40px; background: rgba(12, 2, 2, 0.95); box-shadow: 0 0 40px rgba(255, 0, 0, 0.3); text-align: center; }
+        .eas-header { color: #ff0055; font-size: 2.1rem; font-weight: 900; letter-spacing: 5px; margin-bottom: 20px; text-shadow: 0 0 10px #ff0055; }
+        .eas-body { font-size: 1.1rem; line-height: 1.8; text-align: left; margin-bottom: 30px; }
+        .eas-blink { font-weight: bold; color: #ff9100; animation: crtFlicker 0.2s infinite; letter-spacing: 2px; }
+        .eas-pregunta { color: #ffffff; font-size: 1.5rem; text-align: center; font-weight: bold; margin-top: 15px; text-shadow: 2px 2px #ff0055; letter-spacing: 4px; animation: shake 0.2s infinite; }
+    </style>
+</head>
+<body>
+
+<div id="contenedorAlertaMaldita">
+    <div class="vhs-color-bars">
+        <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div>
+        <div class="bar b4"></div><div class="bar b5"></div><div class="bar b6"></div><div class="bar b7"></div>
+    </div>
+    <div class="eas-box">
+        <div class="eas-header">⚠️ SISTEMA DE TRANSMISIÓN DE EMERGENCIA</div>
+        <div class="eas-body">
+            EL DEPARTAMENTO DE CONTENCIÓN BIOLÓGICA DE PLAYTIME CO. HA EMITIDO UNA ALERTA EN EL SECTOR 4.<br><br>
+            <span style="color: #ff0055;">• EL EXPEDIENTE DOEY HA SIDO ACCESADO DE FORMA EXTERNA.</span><br>
+            • LA ENTIDAD INTEGRADA POR JACK, KEVIN Y MATTHEW ESTÁ GENERANDO SEÑALES EN LA RED CENTRAL.<br>
+            • DEJE DE MIRAR EL MONITOR SI DETECTA UN OLOR INEXPLICABLE A VAINILLA.<br>
+            • REPORTE ESTE PROTOCOLO INMEDIATAMENTE EN SU REGIÓN (TUXPAN, VERACRUZ).<br><br>
+            <span style="font-size: 0.9rem; color: #8a8a9a;">CÓDIGO DE REINICIO ADQUIRIDO DE FORMA REMOTA POR: hk_lord25.</span>
+        </div>
+        <div class="eas-pregunta">¿PUEDES VERNOS? ¿PUEDES OÍRNOS?</div>
+        <br>
+        <div class="eas-blink">[ EL PROCESO DE ASIMILACIÓN ESTÁ EN CURSO. POR FAVOR ESPERE EN SILENCIO ]</div>
+    </div>
+</div>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="wrapper" id="terminalWrapper">
+    <div class="top-bar">
+        <div class="autor-info" id="panelAutor">
+            <h3>
+                // SISTEMA ASIGNADO A: Sergio Miguel Santiago Salas.<br>
+                // MÓDULO INTERFAZ: Uso de Herramientas para Aplicaciones Web.<br>
+                // SUPERVISOR DOCENTE: Marina Aguilera Azamar.<br>
+                // RANGO OPERATIVO: GRUPO 403 INFO / PTB. Informática<br>
+            </h3>
+        </div>
+
+        <div class="control-panel">
+            <a href="https://console.firebase.google.com/u/0/project/playtime-sector4/firestore/databases/-default-/data/~2Foperadores~2FDTSF4Mvz3DlgJ6agNHfB?hl=es-419" target="_blank" class="btn-link-db">
+                💾 ACCEDER A FIRESTORE PANEL
+            </a>
+            
+            <div class="control-musica" id="panelMusica">
+                <span>REPRODUCTOR CENTRAL:</span>
+                <button id="btnMusica">ESPERANDO SEÑAL...</button>
+                <audio id="audioFondo" src="playtime.mp3.mp3" loop></audio>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <h1 id="tituloPrincipal">S.I.P // CONTROL CENTRAL LOCAL</h1>
+        <p id="subtituloPrincipal">PLAYTIME CO. SECURITY ARCHIVE &bull; LOCALHOST PROTOCOL</p>
+    </header>
+
+    <div class="main-grid">
+        <div class="seccion azul" id="secDoey">
+            <h3 id="txtSec1" style="color:var(--neon-azul);">[01] ANÁLISIS DE EXPEDIENTE: SUJETO DOEY</h3>
+            <p>El Sujeto Doey representa uno de los hitos de mayor complejidad biotecnológica dentro de las instalaciones del Sector 4. Su estructura maleable oculta los restos celulares y la conciencia fusionada de tres individuos: <strong>Jack, Kevin y Matthew</strong>, lo que genera un comportamiento errático pero altamente coordinado a nivel motriz.</p>
+            
+            <div class="marco-img">
+                <img id="imgDoey" src="doeyyyyyyyyy.jpg" alt="Arte Visual Sujeto Doey">
+            </div>
+
+            <div class="modulo-audio-cyber" id="modAudio1">
+                <div class="audio-info-texto">
+                    <span class="track-lbl">// AUDIO ARCHIVE</span>
+                    <span id="txtTrack1" class="track-name">DOEY SONG.MP3</span>
+                </div>
+                <button class="btn-audio-cyber" data-target="audioDoeySong">PLAY</button>
+                <audio id="audioDoeySong" src="doey_song.mp3"></audio>
+            </div>
+
+            <p style="font-size: 0.85rem; border: 1px solid rgba(255, 0, 85, 0.3); padding: 15px; background: rgba(255, 0, 85, 0.03); border-left: 4px solid var(--neon-rosa); margin: 0; line-height: 1.6; font-family: monospace;">
+                <span style="color:var(--neon-rosa); font-weight: bold;">[ALERTA DE SEGURIDAD]:</span> El aroma a vainilla detectado en su proximidad es un distractor químico sintetizado para enmascarar su presencia. Muestra una psique fragmentada con episodios agudos de ansiedad existencial ante estímulos de luz alta.
+            </p>
+        </div>
+
+        <div class="seccion rosa" id="secMecanica">
+            <h3 id="txtSec2" style="color:var(--neon-rosa);">[02] REQUERIMIENTOS MECÁNICOS Y CONTENCIÓN</h3>
+            
+            <div class="marco-img">
+                <img id="imgPlaytimeCona" src="playtme cona.jpg" alt="Sello Oficial Playtime CONALEP">
+            </div>
+
+            <div class="modulo-audio-cyber" id="modAudio2">
+                <div class="audio-info-texto">
+                    <span class="track-lbl">// LOG ACÚSTICO CRÍTICO</span>
+                    <span id="txtTrack2" class="track-name">GRITO DE DOEY.MP3</span>
+                </div>
+                <button class="btn-audio-cyber" data-target="audioGritoDoey">PLAY</button>
+                <audio id="audioGritoDoey" src="grito_doey.mp3"></audio>
+            </div>
+
+            <table>
+                <tr><th id="thParametros">Parámetro de Control</th><th id="thRegistro">Grado / Registro Técnico</th></tr>
+                <tr><td>Fusión Estructural</td><td>Compleja (Líneas celulares unificadas)</td></tr>
+                <tr><td>Elasticidad Matriz</td><td>Máxima (Polímero Biológico Reversible)</td></tr>
+                <tr><td>Resistencia Cinética</td><td>Alta (Absorción de impactos por densidad hidrodinámica)</td></tr>
+                <tr><td>Velocidad de Desplazamiento</td><td>Baja (Locomoción por tracción superficial lenta)</td></tr>
+                <tr><td>Umbral Térmico Decay</td><td>Calor Extremo Crítico (&gt;180°C)</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="seccion morado">
+        <h3 style="color:var(--neon-morado);">[03] MATRÍCULA Y ALTA DE OPERADORES ACTIVOS</h3>
+        <p style="font-size: 0.85rem; color: #a5a5b5; margin-top: -5px; margin-bottom: 25px;">Escriba credenciales locales autorizadas para refrescar la carga directa en el clúster de Firebase.</p>
+        <div class="form-registro">
+            <div class="campo">
+                <label>Nombre Completo del Técnico:</label>
+                <input type="text" id="nombre" placeholder="OPERADOR_NAME">
+                <span class="alerta-texto" id="msgAlertaNombre">// Registro obligatorio para el Sector 4</span>
+            </div>
+            <div class="campo">
+                <label>Matrícula / Identificador:</label>
+                <input type="text" id="matricula" placeholder="SEC-403">
+                <span class="alerta-texto" id="msgAlertaMatricula">// Verificación requerida</span>
+            </div>
+            <button id="btnVincular">Inyectar Datos</button>
+        </div>
+        <div id="resultado"></div>
+    </div>
+</div>
+
+<script>
+    // Configuración Base del Canvas de Partículas
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let factorVelocidad = 0.3;
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const points = [];
+    for(let i = 0; i < 45; i++) {
+        points.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.5 + 0.5, dx: (Math.random() - 0.5), dy: (Math.random() - 0.5) });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = factorVelocidad > 1 ? 'rgba(255, 0, 85, 0.2)' : 'rgba(0, 240, 255, 0.15)';
+        
+        points.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+            p.x += p.dx * factorVelocidad; p.y += p.dy * factorVelocidad;
+            if(p.x < 0 || p.x > canvas.width) p.dx *= -1;
+            if(p.y < 0 || p.y > canvas.height) p.dy *= -1;
+        });
+        requestAnimationFrame(draw);
+    }
+    draw();
+</script>
+
+<script>
+    // Gestión Multimedia de Audio Base
+    const miAudio = document.getElementById("audioFondo");
+    const botonMusica = document.getElementById("btnMusica");
+    const botonesCyber = document.querySelectorAll(".btn-audio-cyber");
+
+    function forzarAudio() {
+        let clipsActivos = false;
+        botonesCyber.forEach(btn => {
+            const targetAudio = document.getElementById(btn.getAttribute("data-target"));
+            if(!targetAudio.paused) clipsActivos = true;
+        });
+        if(!clipsActivos) {
+            miAudio.play().then(() => {
+                botonMusica.innerText = "ONLINE // AUDIO EN DIRECTO";
+                botonMusica.classList.add("playing");
+            }).catch(() => {
+                botonMusica.innerText = "SISTEMA SEGURO: INTERACTÚE";
+            });
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", forzarAudio);
+    document.body.addEventListener("click", () => {
+        let clipsActivos = false;
+        botonesCyber.forEach(btn => {
+            const targetAudio = document.getElementById(btn.getAttribute("data-target"));
+            if(!targetAudio.paused) clipsActivos = true;
+        });
+        if (miAudio.paused && !clipsActivos) forzarAudio();
+    }, { once: false });
+
+    botonMusica.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (miAudio.paused) {
+            botonesCyber.forEach(btn => {
+                const targetAudio = document.getElementById(btn.getAttribute("data-target"));
+                targetAudio.pause(); targetAudio.currentTime = 0;
+                btn.innerText = "PLAY"; btn.classList.remove("reproducing");
+            });
+            miAudio.play();
+            botonMusica.innerText = "ONLINE // AUDIO EN DIRECTO";
+            botonMusica.classList.add("playing");
+        } else {
+            miAudio.pause();
+            botonMusica.innerText = "AUDIO MUTED";
+            botonMusica.classList.remove("playing");
+        }
+    });
+
+    botonesCyber.forEach(btn => {
+        const targetAudio = document.getElementById(btn.getAttribute("data-target"));
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if(targetAudio.paused) {
+                miAudio.pause();
+                botonMusica.innerText = "FONDO PAUSADO POR MULTIMEDIA";
+                botonMusica.classList.remove("playing");
+                botonesCyber.forEach(b => {
+                    const otroAudio = document.getElementById(b.getAttribute("data-target"));
+                    if(otroAudio !== targetAudio) {
+                        otroAudio.pause(); otroAudio.currentTime = 0;
+                        b.innerText = "PLAY"; b.classList.remove("reproducing");
+                    }
+                });
+                targetAudio.play();
+                btn.innerText = "PAUSE"; btn.classList.add("reproducing");
+            } else {
+                targetAudio.pause();
+                btn.innerText = "PLAY"; btn.classList.remove("reproducing");
+                forzarAudio();
+            }
+        });
+        targetAudio.addEventListener("ended", () => {
+            btn.innerText = "PLAY"; btn.classList.remove("reproducing");
+            forzarAudio();
+        });
+    });
+</script>
+
+<script>
+    // =========================================================================
+    //        🧠 MOTOR SINTETIZADOR AVANZADO DE TERROR (ANALOG PSYCHOLOGY)
+    // =========================================================================
+    let audioCtx = null;
+    let loopEAS = null, loopRuidoBlanco = null, loopAlarmaBaja = null;
+
+    function iniciarContextoAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            activarInfrasonidoSordo(); // Activa la frecuencia de pánico constante
+        }
+    }
+    document.body.addEventListener('click', iniciarContextoAudio, { once: false });
+
+    // 🔊 FRECUENCIA DE INFRA-SONIDO (19Hz) - Causa pánico físico sutil sin saturar el espectro audible
+    function activarInfrasonidoSordo() {
+        if (!audioCtx) return;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(19, audioCtx.currentTime); 
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start();
+    }
+
+    // 🔊 DISTORSIÓN DE CINTA DAÑADA
+    function crearNodoSaturacion() {
+        let makeDistortionCurve = (amount = 50) => {
+            let k = typeof amount === 'number' ? amount : 50, n_samples = 44100, curve = new Float32Array(n_samples), i = 0, x;
+            for ( ; i < n_samples; ++i ) {
+                x = i * 2 / n_samples - 1;
+                curve[i] = ( 3 + k ) * x * 20 * (Math.PI / 180) / ( Math.PI + k * Math.abs(x) );
+            }
+            return curve;
+        };
+        let waveshaper = audioCtx.createWaveShaper();
+        waveshaper.curve = makeDistortionCurve(80);
+        waveshaper.oversample = '4x';
+        return waveshaper;
+    }
+
+    function triggerVsyncGlitch() {
+        const wrapper = document.getElementById('terminalWrapper');
+        wrapper.classList.add('v-sync-error');
+        setTimeout(() => wrapper.classList.remove('v-sync-error'), 400);
+    }
+
+    function sonarClicGlitch() {
+        if (!audioCtx) return;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        let filter = audioCtx.createBiquadFilter();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(Math.random() * 80 + 30, audioCtx.currentTime);
+        filter.type = 'lowpass'; filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08);
+        osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function encenderSonidoEAS() {
+        iniciarContextoAudio(); if (!audioCtx) return;
+        let distorsion = crearNodoSaturacion();
+        let osc1 = audioCtx.createOscillator(); let gain1 = audioCtx.createGain();
+        osc1.frequency.setValueAtTime(853, audioCtx.currentTime); gain1.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        osc1.connect(distorsion);
+        let osc2 = audioCtx.createOscillator(); let gain2 = audioCtx.createGain();
+        osc2.frequency.setValueAtTime(660, audioCtx.currentTime); gain2.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        osc2.connect(distorsion);
+        distorsion.connect(audioCtx.destination); osc1.start(); osc2.start();
+
+        let bufferSize = 2 * audioCtx.sampleRate, noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+            let white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02; lastOut = output[i]; output[i] *= 4.0;
+        }
+        let brownNoise = audioCtx.createBufferSource(); brownNoise.buffer = noiseBuffer; brownNoise.loop = true;
+        let gainNoise = audioCtx.createGain(); gainNoise.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        brownNoise.connect(gainNoise); gainNoise.connect(audioCtx.destination); brownNoise.start();
+        loopEAS = { stop: () => { osc1.stop(); osc2.stop(); brownNoise.stop(); } };
+    }
+
+    function encenderRuidoBlanco() {
+        if (!audioCtx) return;
+        let bufferSize = audioCtx.sampleRate, noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+        let whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
+        let dist = crearNodoSaturacion(); let gainNode = audioCtx.createGain(); gainNode.gain.setValueAtTime(0.14, audioCtx.currentTime);
+        whiteNoise.connect(dist); dist.connect(gainNode); gainNode.connect(audioCtx.destination);
+        whiteNoise.start(); loopRuidoBlanco = whiteNoise;
+    }
+
+    function encenderZumbidoOpresivo() {
+        if (!audioCtx) return;
+        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); let filter = audioCtx.createBiquadFilter();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(38, audioCtx.currentTime);
+        filter.type = 'lowpass'; filter.frequency.setValueAtTime(150, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        let lfo = audioCtx.createOscillator(); let lfoGain = audioCtx.createGain();
+        lfo.frequency.setValueAtTime(1.2, audioCtx.currentTime); lfoGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+        osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); lfo.start();
+        loopAlarmaBaja = { stop: () => { osc.stop(); lfo.stop(); } };
+    }
+</script>
+
+<script>
+    // =========================================================================
+    //                    SECCIÓN DE EASTER EGGS EXPANDIDA
+    // =========================================================================
+
+    // --- EASTER EGG 1: Secuencia de Hackeo / Diagnóstico en Consola ---
+    const marcosConsola = [
+        "[PROCESANDO] Inicializando bypass en Sector 4...",
+        "[████░░░░░░░░] 32% - Evaluando bio-firma de Doey...",
+        "⚠️ CONEXIÓN ADYACENTE DETECTADA... ¿PUEDES VERNOS?",
+        "[████████████] 100% - CONEXIÓN RAÍZ ESTABLECIDA.",
+        "⚠️ SISTEMA S.I.P VULNERADO. ¿PUEDES OÍRNOS?"
+    ];
+    let lineaActual = 0;
+    function imprimirLogs() {
+        if(lineaActual < marcosConsola.length) {
+            console.log(`%c${marcosConsola[lineaActual]}`, `color: ${lineaActual === 4 || lineaActual === 2 ? '#ff0055' : '#00f0ff'}; font-family: monospace; font-size: 13px; font-weight: bold;`);
+            lineaActual++; setTimeout(imprimirLogs, 1500);
+        }
+    }
+    setTimeout(imprimirLogs, 2000);
+
+    // --- EASTER EGG 2: Glitch de Distorsión en Imagen Doey con Audio ---
+    const imgDoey = document.getElementById('imgDoey');
+    imgDoey.addEventListener('mousemove', (e) => {
+        if (Math.random() < 0.25) {
+            const skewX = (Math.random() - 0.5) * 25; const blurValue = Math.random() * 4;
+            imgDoey.style.filter = `hue-rotate(${Math.random() * 360}deg) invert(1) blur(${blurValue}px) brightness(0.5)`;
+            imgDoey.style.transform = `scale(1.05) skewX(${skewX}deg)`;
+            sonarClicGlitch(); triggerVsyncGlitch();
+            setTimeout(() => { imgDoey.style.filter = "saturate(1.1) contrast(1.1)"; imgDoey.style.transform = "scale(1.02) skewX(0deg)"; }, 120);
+        }
+    });
+
+    // --- EASTER EGG 3: Alarma Crítica de Contención (3 clics en Título Central) ---
+    const titulo = document.getElementById('tituloPrincipal');
+    const subtitulo = document.getElementById('subtituloPrincipal');
+    const panelAutor = document.getElementById('panelAutor');
+    const sec1 = document.getElementById('secDoey'); const sec2 = document.getElementById('secMecanica');
+    let clicsTitulo = 0;
+
+    titulo.addEventListener('click', () => {
+        clicsTitulo++;
+        if (clicsTitulo === 3) {
+            factorVelocidad = 5.5;
+            document.documentElement.style.setProperty('--bg-base', '#1a0105');
+            titulo.innerText = "⚠️ ¿PUEDES VERNOS? ¿PUEDES OÍRNOS?";
+            titulo.style.textShadow = "0 0 25px #ff0055, 0 0 50px #ff0055"; titulo.style.color = "#ff0055";
+            subtitulo.innerText = "ALERT: SUBJECT DOEY BREACHED THE SECTOR 4 PERIMETER // SYSTEM COMPROMISED";
+            subtitulo.style.color = "#ff0055";
+            panelAutor.classList.add('modo-alarma-card'); sec1.classList.add('modo-alarma-card'); sec2.classList.add('modo-alarma-card');
+            encenderZumbidoOpresivo(); triggerVsyncGlitch();
+        } else if (clicsTitulo === 6) {
+            factorVelocidad = 0.3;
+            document.documentElement.style.setProperty('--bg-base', '#020205');
+            titulo.innerText = "S.I.P // CONTROL CENTRAL LOCAL";
+            titulo.style.textShadow = "0 0 15px rgba(255,255,255,0.2), 0 0 30px var(--neon-azul)"; titulo.style.color = "#fff";
+            subtitulo.innerText = "PLAYTIME CO. SECURITY ARCHIVE • LOCALHOST PROTOCOL"; subtitulo.style.color = "var(--neon-azul)";
+            panelAutor.classList.remove('modo-alarma-card'); sec1.classList.remove('modo-alarma-card'); sec2.classList.remove('modo-alarma-card');
+            if (loopAlarmaBaja) { loopAlarmaBaja.stop(); loopAlarmaBaja = null; }
+            clicsTitulo = 0;
+        }
+    });
+
+    // --- EASTER EGG 4: Cascada Matrix en Tabla (Doble Clic) ---
+    const thTabla = document.getElementById('thParametros');
+    const thReg = document.getElementById('thRegistro');
+    const filasTabla = document.querySelectorAll('table tr');
+
+    function ejecutarCascada() {
+        filasTabla.forEach((fila, indice) => {
+            if (indice > 0) {
+                setTimeout(() => {
+                    const celdas = fila.querySelectorAll('td');
+                    celdas.forEach(celda => { celda.style.color = "var(--neon-verde)"; celda.style.textShadow = "0 0 12px var(--neon-verde)"; celda.style.background = "rgba(0, 255, 102, 0.08)"; });
+                    setTimeout(() => { celdas.forEach(celda => { celda.style.color = ""; celda.style.textShadow = ""; celda.style.background = ""; }); }, 1000);
+                }, indice * 180);
+            }
+        });
+    }
+    thTabla.addEventListener('dblclick', ejecutarCascada); thReg.addEventListener('dblclick', ejecutarCascada);
+
+    // --- EASTER EGG 5: Reacción de Intrusos en Formulario y Disparador "ayuda" ---
+    const inputNom = document.getElementById('nombre');
+    const spanAlertaNom = document.getElementById('msgAlertaNombre');
+    const panelAlerta = document.getElementById('contenedorAlertaMaldita');
+
+    inputNom.addEventListener('input', () => {
+        const valor = inputNom.value.toLowerCase().trim();
+        if (valor === 'ayuda') {
+            inputNom.value = ""; inputNom.blur(); inputNom.disabled = true;
+            if(miAudio) miAudio.pause();
+            panelAlerta.style.display = 'flex';
+            encenderSonidoEAS(); setInterval(triggerVsyncGlitch, 500);
+        } else if (valor === 'doey' || valor === 'prototype' || valor === '1006') {
+            inputNom.style.animation = "shake 0.3s ease-in-out"; inputNom.style.borderColor = "#ff0055"; inputNom.style.boxShadow = "0 0 15px rgba(255, 0, 85, 0.4)";
+            if(valor === 'doey') { spanAlertaNom.innerText = "❌ ADVERTENCIA: No intente re-catalogar la anomalía biológica."; }
+            else { spanAlertaNom.innerText = "❌ PROTOCOLO 1006 OCULTO: Origen del Prototipo denegado."; }
+            spanAlertaNom.style.color = "#ff0055"; spanAlertaNom.style.textShadow = "0 0 5px #ff0055";
+            setTimeout(() => { inputNom.style.animation = ""; }, 300);
+        } else {
+            inputNom.style.borderColor = ""; inputNom.style.boxShadow = "";
+            spanAlertaNom.innerText = "// Registro obligatorio para el Sector 4"; spanAlertaNom.style.color = "var(--neon-rosa)"; spanAlertaNom.style.textShadow = "";
+        }
+    });
+
+    // --- EASTER EGG 6: Mensajes Glitcheados Flotantes (Sello Playtime Cona e Interacciones) ---
+    const imgPlaytimeCona = document.getElementById('imgPlaytimeCona');
+    const frasesGlitch = ["¿PUEDES VERNOS?", "¿PUEDES OÍRNOS?", "JACK IS HERE", "KEVIN WATCHES", "MATTHEW ALIVE", "EXPERIMENT DOEY", "HELP US", "VANILLA SCENT DETECTED"];
+
+    function lanzarTextoGlitch(e) {
+        if (Math.random() < 0.15) {
+            const span = document.createElement('span'); span.className = 'glitch-text-float';
+            span.innerText = frasesGlitch[Math.floor(Math.random() * frasesGlitch.length)];
+            span.style.left = `${e.clientX + (Math.random() - 0.5) * 180}px`; 
+            span.style.top = `${e.clientY + (Math.random() - 0.5) * 180}px`;
+            span.style.fontSize = `${Math.random() * 0.6 + 0.9}rem`;
+            document.body.appendChild(span); 
+            setTimeout(() => { span.remove(); }, 700);
+        }
+    }
+
+    imgPlaytimeCona.addEventListener('mousemove', lanzarTextoGlitch);
+    imgDoey.addEventListener('mousemove', lanzarTextoGlitch);
+
+    // --- EASTER EGG 7: Interrogación del Panel de Autor / Pantalla Azul Estática ---
+    panelAutor.addEventListener('click', () => {
+        const h3 = panelAutor.querySelector('h3');
+        if (!panelAutor.classList.contains('data-corrupta')) {
+            panelAutor.classList.add('data-corrupta');
+            panelAutor.style.background = "#0000bb"; panelAutor.style.borderColor = "#ffffff";
+            h3.innerHTML = `<div style="color: #fff; font-size: 1.1rem; font-weight: bold; text-align: center; font-family: monospace; padding: 5px;">⚠️ DEVICE LOSS: SECTOR 4 OVERRIDE<br><span style="font-size:0.85rem; color:#ff0055; font-weight:bold;">¿PUEDES VERNOS? ¿PUEDES OÍRNOS?</span></div>`;
+            encenderRuidoBlanco(); triggerVsyncGlitch();
+        } else {
+            panelAutor.classList.remove('data-corrupta');
+            panelAutor.style.background = ""; panelAutor.style.borderColor = "";
+            h3.innerHTML = `// SISTEMA ASIGNADO A: Sergio Miguel Santiago Salas.<br>// MÓDULO INTERFAZ: Uso de Herramientas para Aplicaciones Web.<br>// SUPERVISOR DOCENTE: Marina Aguilera Azamar.<br>// RANGO OPERATIVO: GRUPO 403 INFO / PTB. Informática<br>`;
+            if (loopRuidoBlanco) { loopRuidoBlanco.stop(); loopRuidoBlanco = null; }
+        }
+    });
+</script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyB2IfxA_voAS7QxMAYoZHR1fuYAJmpfb9Y",
+        authDomain: "playtime-sector4.firebaseapp.com",
+        projectId: "playtime-sector4",
+        storageBucket: "playtime-sector4.firebasestorage.app",
+        messagingSenderId: "997312765036",
+        appId: "1:997312765036:web:8ae56f332ef21b71c3cc49",
+        measurementId: "G-WHDNQQ49ZJ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function cargarTrabajadores() {
+        let areaDisplay = document.getElementById('resultado'); areaDisplay.innerHTML = "";
+        try {
+            const querySnapshot = await getDocs(collection(db, "operadores"));
+            let num = 1;
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                areaDisplay.innerHTML += `
+                    <div class="ficha-empleado">
+                        <strong style="color:var(--neon-azul); font-family: monospace;">// DATA_STREAM_0${num}</strong>
+                        <div style="margin-top: 10px; line-height: 1.6; font-family: monospace;">
+                            <strong>OPERADOR:</strong> ${data.nombre}<br>
+                            <strong>CÓDIGO ID:</strong> <span style="color: var(--neon-verde); font-weight:bold;">${data.matricula}</span>
+                        </div>
+                    </div>
+                `;
+                num++;
+            });
+        } catch (error) { console.error(error); }
+    }
+
+    async function vincular() {
+        let inputNom = document.getElementById('nombre'); let inputMat = document.getElementById('matricula');
+        if(inputNom.value.trim() === "" || inputMat.value.trim() === "") return;
+        try {
+            await addDoc(collection(db, "operadores"), { nombre: inputNom.value, matricula: inputMat.value, fechaRegistro: new Date() });
+            inputNom.value = ""; inputMat.value = ""; cargarTrabajadores();
+        } catch (error) { console.error(error); }
+    }
+
+    document.getElementById("btnVincular").addEventListener("click", vincular);
+    cargarTrabajadores();
+</script>
+
+</body>
+</html>
